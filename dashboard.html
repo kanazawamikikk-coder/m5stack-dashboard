@@ -5,29 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>M5Stack IoT ダッシュボード</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: sans-serif;
       background: #f0f4f8;
-      margin: 0;
       padding: 20px;
+      transition: background 0.5s;
+    }
+    body.calling {
+      background: #ff4444;
+      animation: blink 1s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 100% { background: #ff4444; }
+      50%       { background: #cc0000; }
     }
     h1 {
       text-align: center;
       color: #333;
       font-size: 1.4em;
+      margin-bottom: 8px;
     }
+    #status-bar {
+      text-align: center;
+      font-size: 0.9em;
+      color: #888;
+      margin-bottom: 16px;
+    }
+    #call-banner {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    #call-banner.visible { display: block; }
+    #call-banner h2 {
+      color: #cc0000;
+      font-size: 1.6em;
+      margin-bottom: 16px;
+    }
+    #done-btn {
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 32px;
+      font-size: 1.1em;
+      cursor: pointer;
+    }
+    #done-btn:hover { background: #219a52; }
     .cards {
       display: flex;
       flex-wrap: wrap;
       gap: 16px;
       justify-content: center;
-      margin-top: 20px;
     }
     .card {
       background: white;
       border-radius: 12px;
       padding: 24px;
-      width: 160px;
+      width: 150px;
       text-align: center;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
@@ -46,7 +86,7 @@
       color: #aaa;
       margin-top: 4px;
     }
-    .card.accel .value { color: #4a90d9; }
+    .card.accel .value  { color: #4a90d9; }
     .card.battery .value { color: #27ae60; }
     #last-updated {
       text-align: center;
@@ -54,17 +94,16 @@
       font-size: 0.85em;
       margin-top: 24px;
     }
-    #status {
-      text-align: center;
-      margin-top: 8px;
-      font-size: 0.85em;
-      color: #27ae60;
-    }
   </style>
 </head>
 <body>
-  <h1>M5Stack IoT ダッシュボード</h1>
-  <div id="status">接続中...</div>
+  <h1>M5Stack IoT Dashboard</h1>
+  <div id="status-bar">接続中...</div>
+
+  <div id="call-banner">
+    <h2>呼び出しがあります！</h2>
+    <button id="done-btn" onclick="markDone()">対応済みにする</button>
+  </div>
 
   <div class="cards">
     <div class="card accel">
@@ -92,27 +131,50 @@
   <div id="last-updated">最終更新: --</div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { initializeApp }                   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     // ===== ここを書き換えてください =====
     const firebaseConfig = {
       	apiKey: "AIzaSyBJ7cS-iFUBbqppAgyjLYKNzgKZILS5xbU",
-  	authDomain: "m5stack-iot-prototype.firebaseapp.com",
-  	databaseURL: "https://m5stack-iot-prototype-default-rtdb.asia-southeast1.firebasedatabase.app",
-  	projectId: "m5stack-iot-prototype",
-  	storageBucket: "m5stack-iot-prototype.firebasestorage.app",
-  	messagingSenderId: "1048110401772",
-  	appId: "1:1048110401772:web:457142da65bbb09278bdc9"
+  	authDomain: "m5stack-iot-prototype.firebaseapp.com",
+  	databaseURL: "https://m5stack-iot-prototype-default-rtdb.asia-southeast1.firebasedatabase.app",
+  	projectId: "m5stack-iot-prototype",
+  	storageBucket: "m5stack-iot-prototype.firebasestorage.app",
+  	messagingSenderId: "1048110401772",
+  	appId: "1:1048110401772:web:457142da65bbb09278bdc9"
     };
     // =====================================
 
     const app = initializeApp(firebaseConfig);
     const db  = getDatabase(app);
 
-    const dataRef = ref(db, "sensor_data");
+    // 対応済みボタンをグローバルに公開
+    window.markDone = () => {
+      set(ref(db, "call"), {
+        status:    "done",
+        timestamp: Date.now()
+      });
+    };
 
-    onValue(dataRef, (snapshot) => {
+    // 呼び出し状態の監視
+    onValue(ref(db, "call/status"), (snapshot) => {
+      const status = snapshot.val();
+
+      if (status === "calling") {
+        document.body.classList.add("calling");
+        document.getElementById("call-banner").classList.add("visible");
+        document.getElementById("status-bar").textContent = "呼び出し中！";
+      } else {
+        document.body.classList.remove("calling");
+        document.getElementById("call-banner").classList.remove("visible");
+        document.getElementById("status-bar").textContent =
+          status === "done" ? "対応済み ✅" : "接続中 ✅ リアルタイム受信";
+      }
+    });
+
+    // センサーデータの監視
+    onValue(ref(db, "sensor_data"), (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
@@ -123,7 +185,6 @@
 
       const now = new Date().toLocaleTimeString("ja-JP");
       document.getElementById("last-updated").textContent = "最終更新: " + now;
-      document.getElementById("status").textContent = "接続中 ✅ リアルタイム受信";
     });
   </script>
 </body>
