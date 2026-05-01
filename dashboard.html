@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M5Stack IoT ダッシュボード</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      font-size: 1.4em;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 160px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card .label {
+      font-size: 0.85em;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .card .value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #333;
+    }
+    .card .unit {
+      font-size: 0.8em;
+      color: #aaa;
+      margin-top: 4px;
+    }
+    .card.accel .value { color: #4a90d9; }
+    .card.battery .value { color: #27ae60; }
+    #last-updated {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.85em;
+      margin-top: 24px;
+    }
+    #status {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 0.85em;
+      color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <h1>M5Stack IoT ダッシュボード</h1>
+  <div id="status">接続中...</div>
+
+  <div class="cards">
+    <div class="card accel">
+      <div class="label">加速度 X</div>
+      <div class="value" id="accel_x">--</div>
+      <div class="unit">G</div>
+    </div>
+    <div class="card accel">
+      <div class="label">加速度 Y</div>
+      <div class="value" id="accel_y">--</div>
+      <div class="unit">G</div>
+    </div>
+    <div class="card accel">
+      <div class="label">加速度 Z</div>
+      <div class="value" id="accel_z">--</div>
+      <div class="unit">G</div>
+    </div>
+    <div class="card battery">
+      <div class="label">バッテリー</div>
+      <div class="value" id="battery">--</div>
+      <div class="unit">V</div>
+    </div>
+  </div>
+
+  <div id="last-updated">最終更新: --</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // ===== ここを書き換えてください =====
+    const firebaseConfig = {
+      	apiKey: "AIzaSyBJ7cS-iFUBbqppAgyjLYKNzgKZILS5xbU",
+  	authDomain: "m5stack-iot-prototype.firebaseapp.com",
+  	databaseURL: "https://m5stack-iot-prototype-default-rtdb.asia-southeast1.firebasedatabase.app",
+  	projectId: "m5stack-iot-prototype",
+  	storageBucket: "m5stack-iot-prototype.firebasestorage.app",
+  	messagingSenderId: "1048110401772",
+  	appId: "1:1048110401772:web:457142da65bbb09278bdc9"
+    };
+    // =====================================
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    const dataRef = ref(db, "sensor_data");
+
+    onValue(dataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      document.getElementById("accel_x").textContent = data.accel_x.toFixed(3);
+      document.getElementById("accel_y").textContent = data.accel_y.toFixed(3);
+      document.getElementById("accel_z").textContent = data.accel_z.toFixed(3);
+      document.getElementById("battery").textContent = data.battery.toFixed(2);
+
+      const now = new Date().toLocaleTimeString("ja-JP");
+      document.getElementById("last-updated").textContent = "最終更新: " + now;
+      document.getElementById("status").textContent = "接続中 ✅ リアルタイム受信";
+    });
+  </script>
+</body>
+</html>
