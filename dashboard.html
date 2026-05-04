@@ -94,11 +94,25 @@
       font-size: 0.85em;
       margin-top: 24px;
     }
+    #waiting-banner {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      color: #888;
+      font-size: 1.1em;
+    }
   </style>
 </head>
 <body>
   <h1>M5Stack IoT Dashboard</h1>
   <div id="status-bar">接続中...</div>
+
+  <div id="waiting-banner">
+    <p>待ち受け中...</p>
+  </div>
 
   <div id="call-banner">
     <h2>呼び出しがあります！</h2>
@@ -160,16 +174,26 @@
     // 呼び出し状態の監視
     onValue(ref(db, "call/status"), (snapshot) => {
       const status = snapshot.val();
+      const waitingBanner = document.getElementById("waiting-banner");
+      const callBanner    = document.getElementById("call-banner");
 
       if (status === "calling") {
+        waitingBanner.style.display = "none";
+        callBanner.classList.add("visible");
         document.body.classList.add("calling");
-        document.getElementById("call-banner").classList.add("visible");
         document.getElementById("status-bar").textContent = "呼び出し中！";
-      } else {
+
+      } else if (status === "done") {
+        waitingBanner.style.display = "none";
+        callBanner.classList.remove("visible");
         document.body.classList.remove("calling");
-        document.getElementById("call-banner").classList.remove("visible");
-        document.getElementById("status-bar").textContent =
-          status === "done" ? "対応済み ✅" : "接続中 ✅ リアルタイム受信";
+        document.getElementById("status-bar").textContent = "対応済み ✅";
+
+      } else {
+        waitingBanner.style.display = "block";
+        callBanner.classList.remove("visible");
+        document.body.classList.remove("calling");
+        document.getElementById("status-bar").textContent = "接続中 ✅ リアルタイム受信";
       }
     });
 
