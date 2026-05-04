@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M5Stack IoT ダッシュボード</title>
+  <title>IoT 呼び出しボタンシステム</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -107,7 +107,7 @@
   </style>
 </head>
 <body>
-  <h1>M5Stack IoT Dashboard</h1>
+  <h1>IoT Call Button System (Prototype)</h1>
   <div id="status-bar">接続中...</div>
 
   <div id="waiting-banner">
@@ -119,7 +119,9 @@
     <button id="done-btn" onclick="markDone()">対応済みにする</button>
   </div>
 
+
   <div class="cards">
+	<!--
     <div class="card accel">
       <div class="label">加速度 X</div>
       <div class="value" id="accel_x">--</div>
@@ -135,6 +137,7 @@
       <div class="value" id="accel_z">--</div>
       <div class="unit">G</div>
     </div>
+	-->
     <div class="card battery">
       <div class="label">バッテリー</div>
       <div class="value" id="battery">--</div>
