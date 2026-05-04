@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IoT 呼び出しボタンシステム</title>
+  <title>IoT 呼び出しシステム</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -107,7 +107,7 @@
   </style>
 </head>
 <body>
-  <h1>IoT Call Button System (Prototype)</h1>
+  <h1>IoT Call System (Prototype)</h1>
   <div id="status-bar">接続中...</div>
 
   <div id="waiting-banner">
@@ -139,9 +139,9 @@
     </div>
 	-->
     <div class="card battery">
-      <div class="label">バッテリー</div>
+      <div class="label">ボタンバッテリ残量</div>
       <div class="value" id="battery">--</div>
-      <div class="unit">V</div>
+      <div class="unit">%</div>
     </div>
   </div>
 
@@ -208,7 +208,17 @@
       //document.getElementById("accel_x").textContent = data.accel_x.toFixed(3);
       //document.getElementById("accel_y").textContent = data.accel_y.toFixed(3);
       //document.getElementById("accel_z").textContent = data.accel_z.toFixed(3);
-      document.getElementById("battery").textContent = data.battery.toFixed(2);
+      //document.getElementById("battery").textContent = data.battery.toFixed(2);
+
+	// バッテリー電圧を%に変換
+	const batVoltage = data.battery;
+	const batMin = 3.0;   // 0%とみなす電圧
+	const batMax = 4.2;   // 100%とみなす電圧
+	const batPercent = Math.min(100, Math.max(0,
+    	Math.round((batVoltage - batMin) / (batMax - batMin) * 100)
+	));
+	document.getElementById("battery").textContent = batPercent;
+
 
       const now = new Date().toLocaleTimeString("ja-JP");
       document.getElementById("last-updated").textContent = "最終更新: " + now;
