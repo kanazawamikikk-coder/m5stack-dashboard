@@ -205,9 +205,9 @@
       const data = snapshot.val();
       if (!data) return;
 
-      document.getElementById("accel_x").textContent = data.accel_x.toFixed(3);
-      document.getElementById("accel_y").textContent = data.accel_y.toFixed(3);
-      document.getElementById("accel_z").textContent = data.accel_z.toFixed(3);
+      //document.getElementById("accel_x").textContent = data.accel_x.toFixed(3);
+      //document.getElementById("accel_y").textContent = data.accel_y.toFixed(3);
+      //document.getElementById("accel_z").textContent = data.accel_z.toFixed(3);
       document.getElementById("battery").textContent = data.battery.toFixed(2);
 
       const now = new Date().toLocaleTimeString("ja-JP");
