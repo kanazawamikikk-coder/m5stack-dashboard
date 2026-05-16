@@ -256,11 +256,23 @@
           fill: true
         }]
       },
-      options: {
-        responsive: true,
-        animation: false,
-        scales: commonScales("dB"),
-        plugins: { legend: { labels: { color: tickColor } } }
+     options: {
+    	responsive: true,
+    	animation: false,
+    	scales: {
+      		x: {
+        		ticks: { color: tickColor, maxTicksLimit: 8 },
+        		grid:  { color: gridColor }
+      		},
+      		y: {
+        		min: 30,   // ← 追加
+        		max: 100,  // ← 追加
+        		ticks: { color: tickColor },
+        		grid:  { color: gridColor },
+        		title: { display: true, text: "dB", color: tickColor }
+      		}
+    	},
+    	plugins: { legend: { labels: { color: tickColor } } }
       }
     });
 
@@ -303,19 +315,23 @@
             grid:  { color: gridColor }
           },
           yTemp: {
-            type: "linear",
-            position: "left",
-            ticks: { color: "#ff6b6b" },
-            grid:  { color: gridColor },
-            title: { display: true, text: "温度 (°C)", color: "#ff6b6b" }
-          },
-          yHum: {
-            type: "linear",
-            position: "right",
-            ticks: { color: "#00ff88" },
-            grid:  { drawOnChartArea: false },
-            title: { display: true, text: "湿度 (%)", color: "#00ff88" }
-          }
+    		type: "linear",
+    		position: "left",
+    		min: 0,    // ← 追加
+    		max: 50,   // ← 追加
+    		ticks: { color: "#ff6b6b" },
+    		grid:  { color: gridColor },
+    		title: { display: true, text: "温度 (°C)", color: "#ff6b6b" }
+	  },
+	  yHum: {
+    		type: "linear",
+    		position: "right",
+    		min: 0,    // ← 追加
+    		max: 100,  // ← 追加
+    		ticks: { color: "#00ff88" },
+    		grid:  { drawOnChartArea: false },
+    		title: { display: true, text: "湿度 (%)", color: "#00ff88" }
+	  },
         },
         plugins: { legend: { labels: { color: tickColor } } }
       }
@@ -339,8 +355,20 @@
       },
       options: {
         responsive: true,
-        animation: false,
-        scales: commonScales("hPa"),
+    animation: false,
+    scales: {
+      	x: {
+        	ticks: { color: tickColor, maxTicksLimit: 8 },
+        	grid:  { color: gridColor }
+      	},
+      	y: {
+        	min: 950,   // ← 追加
+        	max: 1050,  // ← 追加
+        	ticks: { color: tickColor },
+        	grid:  { color: gridColor },
+        	title: { display: true, text: "hPa", color: tickColor }
+      	}
+    },
         plugins: { legend: { labels: { color: tickColor } } }
       }
     });
