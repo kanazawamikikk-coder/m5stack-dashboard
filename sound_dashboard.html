@@ -180,6 +180,7 @@
     <button onclick="setRange(60)"  id="btn-60" class="active">直近10分</button>
     <button onclick="setRange(180)" id="btn-180">直近30分</button>
     <button onclick="setRange(360)" id="btn-360">直近1時間</button>
+    <button onclick="setRange(8640)" id="btn-8640">直近1日</button>
   </div>
 
   <!-- SPLグラフ -->
@@ -388,91 +389,147 @@
       else               bar.style.background = "#ff4444";
     }
 
+    // 10分ごとにグループ化して平均を計算
+    function groupByMinutes(dataList, minutes) {
+        const groups = {};
+        const ms = minutes * 60 * 1000;
+
+        dataList.forEach(item => {
+            const time = new Date(item.timestamp).getTime();
+            const groupKey = Math.floor(time / ms) * ms;
+            if (!groups[groupKey]) {
+                groups[groupKey] = {
+                    spl: [], temperature: [], humidity: [], pressure: []
+                };
+            }
+            if (item.spl         !== undefined) groups[groupKey].spl.push(item.spl);
+            if (item.temperature !== undefined) groups[groupKey].temperature.push(item.temperature);
+            if (item.humidity    !== undefined) groups[groupKey].humidity.push(item.humidity);
+            if (item.pressure    !== undefined) groups[groupKey].pressure.push(item.pressure);
+        });
+
+        // 各グループの平均を計算
+        return Object.entries(groups).sort((a, b) => a[0] - b[0]).map(([key, val]) => {
+            const avg = arr => arr.length > 0
+                ? arr.reduce((s, v) => s + v, 0) / arr.length
+                : undefined;
+            return {
+                timestamp: new Date(parseInt(key)).toLocaleTimeString("ja-JP", {
+                    hour: "2-digit", minute: "2-digit"
+                }),
+                spl:         avg(val.spl),
+                temperature: avg(val.temperature),
+                humidity:    avg(val.humidity),
+                pressure:    avg(val.pressure)
+            };
+        });
+    }
+
+
     // グラフ更新
     function updateCharts(dataList) {
+      // 直近1日の場合は10分平均に変換
+      const processedList = maxPoints >= 8640
+          ? groupByMinutes(dataList, 10)
+          : dataList;
+
       const labels   = [];
       const splData  = [];
       const tempData = [];
       const humData  = [];
       const presData = [];
 
-      dataList.forEach(item => {
+      processedList.forEach(item => {
         if (item.spl === undefined) return;
 
-        const time = item.timestamp !== "unknown"
-          ? new Date(item.timestamp).toLocaleTimeString("ja-JP")
-          : "--:--:--";
+        // 直近1日の場合はtimestampがすでに文字列
+        const time = maxPoints >= 8640
+            ? item.timestamp
+            : (item.timestamp !== "unknown"
+                ? new Date(item.timestamp).toLocaleTimeString("ja-JP")
+                : "--:--:--");
 
         labels.push(time);
         splData.push(parseFloat(item.spl.toFixed(1)));
         if (item.temperature !== undefined) tempData.push(parseFloat(item.temperature.toFixed(1)));
         if (item.humidity    !== undefined) humData.push(parseFloat(item.humidity.toFixed(1)));
         if (item.pressure    !== undefined) presData.push(parseFloat(item.pressure.toFixed(1)));
-      });
+    });
 
-      // SPLグラフ更新
-      splChart.data.labels = labels;
-      splChart.data.datasets[0].data = splData;
-      splChart.update();
+        // SPLグラフ更新
+        splChart.data.labels = labels;
+        splChart.data.datasets[0].data = splData;
+        splChart.update();
 
-      // 環境グラフ更新
-      envChart.data.labels = labels;
-      envChart.data.datasets[0].data = tempData;
-      envChart.data.datasets[1].data = humData;
-      envChart.update();
+        // 環境グラフ更新
+        envChart.data.labels = labels;
+        envChart.data.datasets[0].data = tempData;
+        envChart.data.datasets[1].data = humData;
+        envChart.update();
 
-      // 気圧グラフ更新
-      presChart.data.labels = labels;
-      presChart.data.datasets[0].data = presData;
-      presChart.update();
+        // 気圧グラフ更新
+        presChart.data.labels = labels;
+        presChart.data.datasets[0].data = presData;
+        presChart.update();
 
-      // 最新値をカードに表示
-      const latest = dataList.filter(i => i.spl !== undefined).pop();
-      if (latest) {
-        document.getElementById("spl-val").textContent  = latest.spl.toFixed(1);
-        document.getElementById("temp-val").textContent = latest.temperature !== undefined ? latest.temperature.toFixed(1) : "--";
-        document.getElementById("hum-val").textContent  = latest.humidity    !== undefined ? latest.humidity.toFixed(1)    : "--";
-        document.getElementById("pres-val").textContent = latest.pressure    !== undefined ? latest.pressure.toFixed(1)    : "--";
+        // 最新値をカードに表示
+        const latest = dataList.filter(i => i.spl !== undefined).pop();
+        if (latest) {
+            document.getElementById("spl-val").textContent  = latest.spl.toFixed(1);
+            document.getElementById("temp-val").textContent = latest.temperature !== undefined ? latest.temperature.toFixed(1) : "--";
+            document.getElementById("hum-val").textContent  = latest.humidity    !== undefined ? latest.humidity.toFixed(1)    : "--";
+            document.getElementById("pres-val").textContent = latest.pressure    !== undefined ? latest.pressure.toFixed(1)    : "--";
 
-        updateMeter(latest.spl);
+            updateMeter(latest.spl);
 
-        const now = new Date().toLocaleTimeString("ja-JP");
-        document.getElementById("last-updated").textContent = "最終更新: " + now;
-        document.getElementById("status").textContent = "接続中 ✅ リアルタイム受信";
-      }
+            const now = new Date().toLocaleTimeString("ja-JP");
+            document.getElementById("last-updated").textContent = "最終更新: " + now;
+            document.getElementById("status").textContent = "接続中 ✅ リアルタイム受信";
+        }
     }
 
     // Firebaseからデータ取得
+    // リスナー管理用
+    let currentUnsubscribe = null;
+
+    // Firebaseからデータ取得
     function fetchData() {
-      const dataQuery = query(
-        ref(db, "sound_data"),
-        orderByChild("timestamp"),
-        limitToLast(maxPoints)
-      );
+        // 既存のリスナーを解除
+        if (currentUnsubscribe) {
+            currentUnsubscribe();
+            currentUnsubscribe = null;
+        }
 
-      onValue(dataQuery, (snapshot) => {
-        const raw = snapshot.val();
-        if (!raw) return;
+        const dataQuery = query(
+            ref(db, "sound_data"),
+            orderByChild("timestamp"),
+            limitToLast(maxPoints)
+        );
 
-        const dataList = Object.values(raw)
-          .sort((a, b) => {
-            if (a.timestamp < b.timestamp) return -1;
-            if (a.timestamp > b.timestamp) return 1;
-            return 0;
-          });
+        currentUnsubscribe = onValue(dataQuery, (snapshot) => {
+            const raw = snapshot.val();
+            if (!raw) return;
 
-        updateCharts(dataList);
-      });
+            const dataList = Object.values(raw)
+                .filter(item => item.timestamp && item.timestamp !== "unknown")
+                .sort((a, b) => {
+                    if (a.timestamp < b.timestamp) return -1;
+                    if (a.timestamp > b.timestamp) return 1;
+                    return 0;
+                });
+
+            updateCharts(dataList);
+        });
     }
 
     // 表示範囲切り替え
     window.setRange = (points) => {
-      maxPoints = points;
-      document.querySelectorAll(".controls button").forEach(btn => {
-        btn.classList.remove("active");
-      });
-      document.getElementById("btn-" + points).classList.add("active");
-      fetchData();
+        maxPoints = points;
+        document.querySelectorAll(".controls button").forEach(btn => {
+            btn.classList.remove("active");
+        });
+        document.getElementById("btn-" + points).classList.add("active");
+        fetchData();  // リスナーを付け替え
     };
 
     fetchData();
